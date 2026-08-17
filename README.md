@@ -20,7 +20,7 @@ The app is also fully static: [index.html](index.html), [style.css](style.css), 
 | Action | Control |
 | --- | --- |
 | Draw | Drag with a mouse, pen, or single finger |
-| Select a stroke color | Use the color picker in the top-left toolbar |
+| Cycle red, green, blue, and white | Click the color swatch or press the Slim Pen 2 barrel button |
 | Change base stroke width | Use the width slider (1–60 px) |
 | Toggle fullscreen | Click the fullscreen button or press `F` |
 | Exit fullscreen | Press `Esc` |
@@ -28,7 +28,6 @@ The app is also fully static: [index.html](index.html), [style.css](style.css), 
 | Clear the current canvas with confirmation | Double-click the canvas |
 | Previous canvas page | Left Arrow |
 | Next canvas page | Right Arrow |
-| Cycle red, green, blue, and white | Press the Slim Pen 2 barrel button |
 | Spot erase | Draw with the Slim Pen 2 rear eraser button |
 
 ## Behavior

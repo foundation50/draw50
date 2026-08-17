@@ -7,6 +7,7 @@ const pageIndicator = document.getElementById('page-indicator');
 
 const pages = new Map();
 const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffffff'];
+const barrelPointerIds = new Set();
 let activePageIndex = 0;
 let isDrawing = false;
 let isErasing = false;
@@ -21,6 +22,8 @@ function createPage(width, height, dpr) {
   surfaceCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   surfaceCtx.lineCap = 'round';
   surfaceCtx.lineJoin = 'round';
+  surfaceCtx.strokeStyle = '#ffffff';
+  surfaceCtx.fillStyle = '#ffffff';
   return { surface, ctx: surfaceCtx, width, height, dpr };
 }
 
@@ -119,8 +122,17 @@ function midpoint(first, second) {
 
 function setStrokeFromUI() {
   const page = getPage();
-  page.ctx.strokeStyle = colorInput.value || '#ffffff';
+  const selectedColor = colors.includes(colorInput.value.toLowerCase()) ? colorInput.value : '#ffffff';
+  colorInput.value = selectedColor;
+  colorInput.style.backgroundColor = selectedColor;
+  page.ctx.strokeStyle = selectedColor;
   page.ctx.lineWidth = parseFloat(widthInput.value) || 6;
+}
+
+function cycleColor() {
+  const colorIndex = colors.indexOf(colorInput.value.toLowerCase());
+  colorInput.value = colors[(colorIndex + 1) % colors.length];
+  setStrokeFromUI();
 }
 
 function drawSmooth() {
@@ -167,9 +179,8 @@ function strokeWidth(event) {
 
 canvas.addEventListener('pointerdown', (event) => {
   if (isBarrelButton(event)) {
-    const colorIndex = colors.indexOf(colorInput.value.toLowerCase());
-    colorInput.value = colors[(colorIndex + 1) % colors.length];
-    setStrokeFromUI();
+    barrelPointerIds.add(event.pointerId);
+    cycleColor();
     event.preventDefault();
     return;
   }
@@ -191,6 +202,16 @@ canvas.addEventListener('pointerdown', (event) => {
 });
 
 canvas.addEventListener('pointermove', (event) => {
+  if (isBarrelButton(event)) {
+    if (!barrelPointerIds.has(event.pointerId)) {
+      barrelPointerIds.add(event.pointerId);
+      cycleColor();
+      points = [];
+    }
+    return;
+  }
+
+  barrelPointerIds.delete(event.pointerId);
   if (!isDrawing) return;
   const page = getPage();
   page.ctx.lineWidth = strokeWidth(event);
@@ -200,6 +221,7 @@ canvas.addEventListener('pointermove', (event) => {
 });
 
 function endStroke(event) {
+  barrelPointerIds.delete(event.pointerId);
   if (!isDrawing) return;
   isDrawing = false;
   isErasing = false;
@@ -212,7 +234,7 @@ canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', endStroke);
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
-colorInput.addEventListener('input', setStrokeFromUI);
+colorInput.addEventListener('click', cycleColor);
 widthInput.addEventListener('input', setStrokeFromUI);
 
 async function enterFullscreen() {
@@ -260,4 +282,5 @@ window.addEventListener(
 );
 
 resizeCanvas();
+colorInput.value = '#ffffff';
 setStrokeFromUI();

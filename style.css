@@ -44,7 +44,7 @@ canvas#draw-canvas{
 #controls{display:flex;gap:8px;align-items:center}
 .control{display:flex;gap:6px;align-items:center;color:var(--accent);font-size:13px}
 .control input[type="range"]{cursor:pointer}
-.control input[type="color"]{width:36px;height:28px;padding:0;border-radius:6px;border:0;background:white}
+#color{width:36px;height:28px;padding:0;border-radius:6px;border:0;background:#fff;cursor:pointer}
 .hint{right:12px;top:12px;padding:8px 12px;background:rgba(0,0,0,0.35);border-radius:8px;font-size:13px}
 
 /* When in fullscreen make sure canvas still fills viewport */
