@@ -19,7 +19,7 @@ canvas#draw-canvas{
   height:100vh;
   display:block;
   touch-action: none; /* allow pointer events for drawing */
-  cursor: crosshair;
+  cursor: none;
 }
 .overlay{
   position:fixed;
@@ -40,6 +40,7 @@ canvas#draw-canvas{
 #fullscreen-btn{
   width:40px;height:40px;border-radius:8px;border:0;background:transparent;color:var(--accent);font-size:18px;cursor:pointer;
 }
+#page-indicator{font-size:13px;min-width:52px;text-align:center}
 #controls{display:flex;gap:8px;align-items:center}
 .control{display:flex;gap:6px;align-items:center;color:var(--accent);font-size:13px}
 .control input[type="range"]{cursor:pointer}

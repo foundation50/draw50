@@ -1,189 +1,263 @@
 const canvas = document.getElementById('draw-canvas');
-const ctx = canvas.getContext('2d', { alpha: false }); // opaque for better performance
-
+const ctx = canvas.getContext('2d', { alpha: false });
 const colorInput = document.getElementById('color');
 const widthInput = document.getElementById('width');
 const fsBtn = document.getElementById('fullscreen-btn');
+const pageIndicator = document.getElementById('page-indicator');
 
+const pages = new Map();
+const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffffff'];
+let activePageIndex = 0;
 let isDrawing = false;
-let points = []; // store last few points for smoothing
-const baseWidth = parseInt(widthInput.value, 10) || 6;
+let isErasing = false;
+let points = [];
+let viewport = { width: 0, height: 0, dpr: 1 };
 
-function resizeCanvas(preserveContent = true){
-  const dpr = Math.max(window.devicePixelRatio || 1, 1);
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+function createPage(width, height, dpr) {
+  const surface = document.createElement('canvas');
+  surface.width = Math.round(width * dpr);
+  surface.height = Math.round(height * dpr);
+  const surfaceCtx = surface.getContext('2d');
+  surfaceCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  surfaceCtx.lineCap = 'round';
+  surfaceCtx.lineJoin = 'round';
+  return { surface, ctx: surfaceCtx, width, height, dpr };
+}
 
-  // Snapshot current drawing before the canvas is resized (which clears it).
-  let snapshot = null;
-  if(preserveContent && canvas.width > 0 && canvas.height > 0){
-    snapshot = document.createElement('canvas');
-    snapshot.width = canvas.width;
-    snapshot.height = canvas.height;
-    snapshot.getContext('2d').drawImage(canvas, 0, 0);
+function getPage(index = activePageIndex) {
+  let page = pages.get(index);
+  if (!page) {
+    page = createPage(viewport.width, viewport.height, viewport.dpr);
+    pages.set(index, page);
   }
+  return page;
+}
 
-  canvas.style.width = w + 'px';
-  canvas.style.height = h + 'px';
-  canvas.width = Math.round(w * dpr);
-  canvas.height = Math.round(h * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+function expandPage(page, width, height) {
+  const nextWidth = Math.max(page.width, width);
+  const nextHeight = Math.max(page.height, height);
+  if (nextWidth === page.width && nextHeight === page.height) return;
 
-  // Fill background first.
+  const expanded = createPage(nextWidth, nextHeight, page.dpr);
+  const offsetX = (nextWidth - page.width) / 2;
+  const offsetY = (nextHeight - page.height) / 2;
+  expanded.ctx.drawImage(
+    page.surface,
+    0,
+    0,
+    page.surface.width,
+    page.surface.height,
+    offsetX,
+    offsetY,
+    page.width,
+    page.height,
+  );
+  page.surface = expanded.surface;
+  page.ctx = expanded.ctx;
+  page.width = nextWidth;
+  page.height = nextHeight;
+}
+
+function getViewportOffset(page) {
+  return {
+    x: (page.width - viewport.width) / 2,
+    y: (page.height - viewport.height) / 2,
+  };
+}
+
+function render() {
+  const page = getPage();
+  const offset = getViewportOffset(page);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#1f2226';
-  ctx.fillRect(0, 0, w, h);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(
+    page.surface,
+    Math.round(offset.x * page.dpr),
+    Math.round(offset.y * page.dpr),
+    Math.round(viewport.width * page.dpr),
+    Math.round(viewport.height * page.dpr),
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+}
 
-  // Restore the saved drawing scaled to the new CSS size.
-  if(snapshot){
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // draw in raw pixel space
-    ctx.drawImage(snapshot, 0, 0, snapshot.width, snapshot.height, 0, 0, canvas.width, canvas.height);
-    ctx.restore();
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+function resizeCanvas() {
+  viewport = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    dpr: Math.max(window.devicePixelRatio || 1, 1),
+  };
+  canvas.width = Math.round(viewport.width * viewport.dpr);
+  canvas.height = Math.round(viewport.height * viewport.dpr);
+  for (const page of pages.values()) {
+    expandPage(page, viewport.width, viewport.height);
   }
-
-  // Restore stroke settings (setTransform resets them).
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = colorInput.value || '#fff';
-  ctx.lineWidth = parseFloat(widthInput.value) || 6;
+  render();
 }
 
-// Utility
-function pt(x,y){ return {x, y}; }
-function midpoint(p1,p2){ return { x: (p1.x + p2.x)/2, y: (p1.y + p2.y)/2 }; }
-
-function setStrokeFromUI(e){
-  ctx.strokeStyle = colorInput.value || '#fff';
-  // width controlled here but also modulated by pressure
-  ctx.lineWidth = parseFloat(widthInput.value) || 6;
+function clearPage() {
+  const page = getPage();
+  page.ctx.setTransform(1, 0, 0, 1, 0, 0);
+  page.ctx.clearRect(0, 0, page.surface.width, page.surface.height);
+  page.ctx.setTransform(page.dpr, 0, 0, page.dpr, 0, 0);
+  render();
 }
 
-setStrokeFromUI();
+function changePage(direction) {
+  activePageIndex += direction;
+  getPage();
+  pageIndicator.textContent = `Page ${activePageIndex}`;
+  render();
+}
 
-// Smooth drawing using quadratic curves between midpoints.
-function drawSmooth(){
-  if(points.length < 2) return;
-  // When >=3 points, draw quadratic between midpoints of (p0,p1) and (p1,p2)
-  if(points.length >= 3){
-    const p0 = points[points.length-3];
-    const p1 = points[points.length-2];
-    const p2 = points[points.length-1];
-    const m1 = midpoint(p0,p1);
-    const m2 = midpoint(p1,p2);
+function midpoint(first, second) {
+  return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+}
 
-    ctx.beginPath();
-    ctx.moveTo(m1.x, m1.y);
-    ctx.quadraticCurveTo(p1.x, p1.y, m2.x, m2.y);
-    ctx.stroke();
+function setStrokeFromUI() {
+  const page = getPage();
+  page.ctx.strokeStyle = colorInput.value || '#ffffff';
+  page.ctx.lineWidth = parseFloat(widthInput.value) || 6;
+}
+
+function drawSmooth() {
+  if (points.length < 2) return;
+
+  const drawCtx = getPage().ctx;
+  drawCtx.beginPath();
+  if (points.length === 2) {
+    drawCtx.moveTo(points[0].x, points[0].y);
+    drawCtx.lineTo(points[1].x, points[1].y);
   } else {
-    // just two points — draw a line
-    const a = points[0];
-    const b = points[1];
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
+    const firstMidpoint = midpoint(points[points.length - 3], points[points.length - 2]);
+    const lastPoint = points[points.length - 2];
+    const secondMidpoint = midpoint(lastPoint, points[points.length - 1]);
+    drawCtx.moveTo(firstMidpoint.x, firstMidpoint.y);
+    drawCtx.quadraticCurveTo(lastPoint.x, lastPoint.y, secondMidpoint.x, secondMidpoint.y);
   }
+  drawCtx.stroke();
+  render();
 }
 
-// pointer handlers
-canvas.addEventListener('pointerdown', (e) => {
-  // only handle primary button
-  if (e.button && e.button !== 0) return;
-  canvas.setPointerCapture(e.pointerId);
-  isDrawing = true;
-  points = [];
-  // set stroke style/width for this pointer
-  setStrokeFromUI();
-  const pressure = e.pressure || 0.5;
-  ctx.lineWidth = (parseFloat(widthInput.value) || baseWidth) * (pressure < 0.01 ? 1 : (0.5 + pressure));
+function isRearEraser(event) {
+  return event.pointerType === 'pen' && (event.button === 5 || (event.buttons & 32) !== 0);
+}
 
+function isBarrelButton(event) {
+  return event.pointerType === 'pen' && (event.button === 2 || (event.buttons & 2) !== 0);
+}
+
+function pointFromEvent(event) {
   const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  points.push(pt(x,y));
-  // For a crisp start draw a tiny dot
-  ctx.beginPath();
-  ctx.arc(x, y, ctx.lineWidth/2, 0, Math.PI*2);
-  ctx.fillStyle = ctx.strokeStyle;
-  ctx.fill();
+  const offset = getViewportOffset(getPage());
+  return {
+    x: event.clientX - rect.left + offset.x,
+    y: event.clientY - rect.top + offset.y,
+  };
+}
+
+function strokeWidth(event) {
+  const pressure = event.pressure || 0.5;
+  const baseWidth = parseFloat(widthInput.value) || 6;
+  return baseWidth * (pressure < 0.01 ? 1 : 0.5 + pressure);
+}
+
+canvas.addEventListener('pointerdown', (event) => {
+  if (isBarrelButton(event)) {
+    const colorIndex = colors.indexOf(colorInput.value.toLowerCase());
+    colorInput.value = colors[(colorIndex + 1) % colors.length];
+    setStrokeFromUI();
+    event.preventDefault();
+    return;
+  }
+
+  if (event.button && event.button !== 0 && !isRearEraser(event)) return;
+  canvas.setPointerCapture(event.pointerId);
+  isDrawing = true;
+  isErasing = isRearEraser(event);
+  points = [pointFromEvent(event)];
+
+  const page = getPage();
+  page.ctx.globalCompositeOperation = isErasing ? 'destination-out' : 'source-over';
+  page.ctx.lineWidth = strokeWidth(event);
+  page.ctx.beginPath();
+  page.ctx.arc(points[0].x, points[0].y, page.ctx.lineWidth / 2, 0, Math.PI * 2);
+  page.ctx.fillStyle = isErasing ? '#000000' : page.ctx.strokeStyle;
+  page.ctx.fill();
+  render();
 });
 
-canvas.addEventListener('pointermove', (e) => {
-  if(!isDrawing) return;
-  // update width via pressure if available
-  const pressure = e.pressure || 0.5;
-  ctx.lineWidth = (parseFloat(widthInput.value) || baseWidth) * (pressure < 0.01 ? 1 : (0.5 + pressure));
-
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  points.push(pt(x,y));
-  // limit length to keep smoothing stable
-  if(points.length > 100) points.shift();
+canvas.addEventListener('pointermove', (event) => {
+  if (!isDrawing) return;
+  const page = getPage();
+  page.ctx.lineWidth = strokeWidth(event);
+  points.push(pointFromEvent(event));
+  if (points.length > 3) points.shift();
   drawSmooth();
 });
 
-function endStroke(e){
-  if(!isDrawing) return;
+function endStroke(event) {
+  if (!isDrawing) return;
   isDrawing = false;
-  canvas.releasePointerCapture?.(e?.pointerId);
-  // finalize remaining points (if any)
-  if(points.length === 2){
-    drawSmooth();
-  }
+  isErasing = false;
+  canvas.releasePointerCapture?.(event.pointerId);
+  getPage().ctx.globalCompositeOperation = 'source-over';
   points = [];
 }
 
 canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', endStroke);
+canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
-// UI bindings
-colorInput.addEventListener('input', () => {
-  ctx.strokeStyle = colorInput.value;
-});
-widthInput.addEventListener('input', () => {
-  ctx.lineWidth = parseFloat(widthInput.value);
-});
+colorInput.addEventListener('input', setStrokeFromUI);
+widthInput.addEventListener('input', setStrokeFromUI);
 
-// Fullscreen toggle
-async function enterFullscreen(){
-  try{
-    if(document.fullscreenElement){
+async function enterFullscreen() {
+  try {
+    if (document.fullscreenElement) {
       await document.exitFullscreen();
     } else {
-      // prefer fullscreen on the canvas element to remove browser chrome
       await canvas.requestFullscreen({ navigationUI: 'hide' });
     }
-  }catch(err){
-    console.warn('Fullscreen error', err);
+  } catch (error) {
+    console.warn('Fullscreen error', error);
   }
 }
+
 fsBtn.addEventListener('click', enterFullscreen);
 
-// keyboard: F toggles fullscreen
-window.addEventListener('keydown', (e) => {
-  if(e.key === 'f' || e.key === 'F'){
+window.addEventListener('keydown', (event) => {
+  if (event.target instanceof HTMLInputElement) return;
+
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault();
+    changePage(-1);
+  } else if (event.key === 'ArrowRight') {
+    event.preventDefault();
+    changePage(1);
+  } else if (event.key.toLowerCase() === 'c') {
+    clearPage();
+  } else if (event.key.toLowerCase() === 'f') {
     enterFullscreen();
   }
 });
 
-// keep canvas sized
-window.addEventListener('resize', resizeCanvas);
-// on orientation change too
-window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 200));
-
-// initialize
-resizeCanvas();
-
-// Helpful: prevent two-finger gestures on touch from scrolling
-window.addEventListener('touchmove', (e)=>{ if(e.touches && e.touches.length>1) e.preventDefault(); }, { passive:false });
-
-// Expose a quick clear via double click
-canvas.addEventListener('dblclick', (e)=>{
-  const r = confirm('Clear canvas?');
-  if(r){
-    resizeCanvas(false);
-  }
+canvas.addEventListener('dblclick', () => {
+  if (confirm('Clear canvas?')) clearPage();
 });
+
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 200));
+window.addEventListener(
+  'touchmove',
+  (event) => {
+    if (event.touches.length > 1) event.preventDefault();
+  },
+  { passive: false },
+);
+
+resizeCanvas();
+setStrokeFromUI();
