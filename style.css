@@ -21,6 +21,10 @@ canvas#draw-canvas{
   touch-action: none; /* allow pointer events for drawing */
   cursor: none;
 }
+.page-enter-up{animation:page-enter-up 180ms ease-out}
+.page-enter-down{animation:page-enter-down 180ms ease-out}
+@keyframes page-enter-up{from{transform:translateY(-8%);opacity:0.2}to{transform:translateY(0);opacity:1}}
+@keyframes page-enter-down{from{transform:translateY(8%);opacity:0.2}to{transform:translateY(0);opacity:1}}
 .overlay{
   position:fixed;
   z-index:30;

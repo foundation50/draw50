@@ -18,13 +18,13 @@
         <button id="color" type="button" value="#ffffff" title="Cycle stroke color" aria-label="Cycle stroke color"></button>
       </label>
       <label class="control">
-        <span>Width</span>
-        <input id="width" type="range" min="1" max="60" value="6">
+        <span>Size <output id="width-value">0</output></span>
+        <input id="width" type="range" min="0" max="9" step="1" value="0">
       </label>
     </div>
   </div>
 
-  <div id="hint" class="overlay hint">Arrow keys: pages · C: clear · F: fullscreen · F13: color</div>
+  <div id="hint" class="overlay hint">Up/down: pages · Backspace: undo · C: clear · F13: color</div>
 
   <script type="module" src="app.js"></script>
 </body>

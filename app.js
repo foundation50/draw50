@@ -2,15 +2,17 @@ const canvas = document.getElementById('draw-canvas');
 const ctx = canvas.getContext('2d', { alpha: false });
 const colorInput = document.getElementById('color');
 const widthInput = document.getElementById('width');
+const widthValue = document.getElementById('width-value');
 const fsBtn = document.getElementById('fullscreen-btn');
 const pageIndicator = document.getElementById('page-indicator');
 
-const pages = new Map();
+const AUTO_SAVE_DELAY_MS = 15_000;
 const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffffff'];
+const strokeWidths = [2, 3, 4, 6, 8, 11, 14, 18, 23, 29];
+const pages = new Map();
+
 let activePageIndex = 0;
-let isDrawing = false;
-let isErasing = false;
-let points = [];
+let activeStroke = null;
 let viewport = { width: 0, height: 0, dpr: 1 };
 
 function createPage(width, height, dpr) {
@@ -21,9 +23,16 @@ function createPage(width, height, dpr) {
   surfaceCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   surfaceCtx.lineCap = 'round';
   surfaceCtx.lineJoin = 'round';
-  surfaceCtx.strokeStyle = '#ffffff';
-  surfaceCtx.fillStyle = '#ffffff';
-  return { surface, ctx: surfaceCtx, width, height, dpr };
+  return {
+    surface,
+    ctx: surfaceCtx,
+    width,
+    height,
+    dpr,
+    strokes: [],
+    revision: 0,
+    saveTimer: null,
+  };
 }
 
 function getPage(index = activePageIndex) {
@@ -33,6 +42,12 @@ function getPage(index = activePageIndex) {
     pages.set(index, page);
   }
   return page;
+}
+
+function prepareContext(page) {
+  page.ctx.setTransform(page.dpr, 0, 0, page.dpr, 0, 0);
+  page.ctx.lineCap = 'round';
+  page.ctx.lineJoin = 'round';
 }
 
 function expandPage(page, width, height) {
@@ -54,6 +69,14 @@ function expandPage(page, width, height) {
     page.width,
     page.height,
   );
+
+  for (const stroke of page.strokes) {
+    for (const point of stroke.points) {
+      point.x += offsetX;
+      point.y += offsetY;
+    }
+  }
+
   page.surface = expanded.surface;
   page.ctx = expanded.ctx;
   page.width = nextWidth;
@@ -67,11 +90,15 @@ function getViewportOffset(page) {
   };
 }
 
+function backgroundColor() {
+  return getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#1f2226';
+}
+
 function render() {
   const page = getPage();
   const offset = getViewportOffset(page);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#1f2226';
+  ctx.fillStyle = backgroundColor();
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(
     page.surface,
@@ -84,6 +111,46 @@ function render() {
     canvas.width,
     canvas.height,
   );
+}
+
+function renderStroke(page, stroke) {
+  const drawCtx = page.ctx;
+  const { points } = stroke;
+  if (points.length === 0) return;
+
+  drawCtx.globalCompositeOperation = stroke.isErasing ? 'destination-out' : 'source-over';
+  drawCtx.strokeStyle = stroke.color;
+  drawCtx.fillStyle = stroke.isErasing ? '#000000' : stroke.color;
+  drawCtx.lineWidth = points[0].width;
+  drawCtx.beginPath();
+  drawCtx.arc(points[0].x, points[0].y, drawCtx.lineWidth / 2, 0, Math.PI * 2);
+  drawCtx.fill();
+
+  for (let index = 1; index < points.length; index += 1) {
+    const current = points[index];
+    drawCtx.lineWidth = current.width;
+    drawCtx.beginPath();
+    if (index === 1) {
+      drawCtx.moveTo(points[0].x, points[0].y);
+      drawCtx.lineTo(current.x, current.y);
+    } else {
+      const firstMidpoint = midpoint(points[index - 2], points[index - 1]);
+      const secondMidpoint = midpoint(points[index - 1], current);
+      drawCtx.moveTo(firstMidpoint.x, firstMidpoint.y);
+      drawCtx.quadraticCurveTo(points[index - 1].x, points[index - 1].y, secondMidpoint.x, secondMidpoint.y);
+    }
+    drawCtx.stroke();
+  }
+}
+
+function redrawPage(page) {
+  page.ctx.setTransform(1, 0, 0, 1, 0, 0);
+  page.ctx.clearRect(0, 0, page.surface.width, page.surface.height);
+  prepareContext(page);
+  for (const stroke of page.strokes) {
+    renderStroke(page, stroke);
+  }
+  page.ctx.globalCompositeOperation = 'source-over';
 }
 
 function resizeCanvas() {
@@ -100,11 +167,61 @@ function resizeCanvas() {
   render();
 }
 
+function markPageDirty(page, index = activePageIndex) {
+  page.revision += 1;
+  if (page.saveTimer) clearTimeout(page.saveTimer);
+  const revision = page.revision;
+  page.saveTimer = setTimeout(() => {
+    page.saveTimer = null;
+    if (page.revision === revision) downloadPage(index);
+  }, AUTO_SAVE_DELAY_MS);
+}
+
+function downloadPage(index) {
+  const page = getPage(index);
+  const offset = getViewportOffset(page);
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = Math.round(viewport.width * viewport.dpr);
+  exportCanvas.height = Math.round(viewport.height * viewport.dpr);
+  const exportCtx = exportCanvas.getContext('2d');
+  exportCtx.fillStyle = backgroundColor();
+  exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+  exportCtx.drawImage(
+    page.surface,
+    Math.round(offset.x * page.dpr),
+    Math.round(offset.y * page.dpr),
+    exportCanvas.width,
+    exportCanvas.height,
+    0,
+    0,
+    exportCanvas.width,
+    exportCanvas.height,
+  );
+  exportCanvas.toBlob((blob) => {
+    if (!blob) return;
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `draw50-page-${index}-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 0);
+  }, 'image/png');
+}
+
 function clearPage() {
   const page = getPage();
-  page.ctx.setTransform(1, 0, 0, 1, 0, 0);
-  page.ctx.clearRect(0, 0, page.surface.width, page.surface.height);
-  page.ctx.setTransform(page.dpr, 0, 0, page.dpr, 0, 0);
+  if (page.strokes.length === 0) return;
+  page.strokes = [];
+  redrawPage(page);
+  markPageDirty(page);
+  render();
+}
+
+function undoLastStroke() {
+  const page = getPage();
+  if (page.strokes.length === 0) return;
+  page.strokes.pop();
+  redrawPage(page);
+  markPageDirty(page);
   render();
 }
 
@@ -112,45 +229,31 @@ function changePage(direction) {
   activePageIndex += direction;
   getPage();
   pageIndicator.textContent = `Page ${activePageIndex}`;
+  canvas.classList.remove('page-enter-up', 'page-enter-down');
   render();
+  void canvas.offsetWidth;
+  canvas.classList.add(direction < 0 ? 'page-enter-up' : 'page-enter-down');
 }
 
 function midpoint(first, second) {
   return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
 }
 
+function selectedStrokeWidth() {
+  return strokeWidths[Number(widthInput.value)] ?? strokeWidths[0];
+}
+
 function setStrokeFromUI() {
-  const page = getPage();
   const selectedColor = colors.includes(colorInput.value.toLowerCase()) ? colorInput.value : '#ffffff';
   colorInput.value = selectedColor;
   colorInput.style.backgroundColor = selectedColor;
-  page.ctx.strokeStyle = selectedColor;
-  page.ctx.lineWidth = parseFloat(widthInput.value) || 6;
+  widthValue.textContent = widthInput.value;
 }
 
 function cycleColor() {
   const colorIndex = colors.indexOf(colorInput.value.toLowerCase());
   colorInput.value = colors[(colorIndex + 1) % colors.length];
   setStrokeFromUI();
-}
-
-function drawSmooth() {
-  if (points.length < 2) return;
-
-  const drawCtx = getPage().ctx;
-  drawCtx.beginPath();
-  if (points.length === 2) {
-    drawCtx.moveTo(points[0].x, points[0].y);
-    drawCtx.lineTo(points[1].x, points[1].y);
-  } else {
-    const firstMidpoint = midpoint(points[points.length - 3], points[points.length - 2]);
-    const lastPoint = points[points.length - 2];
-    const secondMidpoint = midpoint(lastPoint, points[points.length - 1]);
-    drawCtx.moveTo(firstMidpoint.x, firstMidpoint.y);
-    drawCtx.quadraticCurveTo(lastPoint.x, lastPoint.y, secondMidpoint.x, secondMidpoint.y);
-  }
-  drawCtx.stroke();
-  render();
 }
 
 function isRearEraser(event) {
@@ -168,49 +271,47 @@ function pointFromEvent(event) {
 
 function strokeWidth(event, isEraser = false) {
   const pressure = event.pressure || 0.5;
-  const baseWidth = parseFloat(widthInput.value) || 6;
-  const pressureWidth = baseWidth * (pressure < 0.01 ? 1 : 0.5 + pressure);
+  const pressureWidth = selectedStrokeWidth() * (pressure < 0.01 ? 1 : 0.5 + pressure);
   return isEraser ? pressureWidth * 2.5 : pressureWidth;
 }
 
 canvas.addEventListener('pointerdown', (event) => {
   if (event.button && event.button !== 0 && !isRearEraser(event)) return;
   canvas.setPointerCapture(event.pointerId);
-  isDrawing = true;
-  isErasing = isRearEraser(event);
-  points = [pointFromEvent(event)];
 
   const page = getPage();
-  page.ctx.globalCompositeOperation = isErasing ? 'destination-out' : 'source-over';
-  page.ctx.lineWidth = strokeWidth(event, isErasing);
-  page.ctx.beginPath();
-  page.ctx.arc(points[0].x, points[0].y, page.ctx.lineWidth / 2, 0, Math.PI * 2);
-  page.ctx.fillStyle = isErasing ? '#000000' : page.ctx.strokeStyle;
-  page.ctx.fill();
+  const isErasing = isRearEraser(event);
+  activeStroke = {
+    color: colorInput.value,
+    isErasing,
+    points: [{ ...pointFromEvent(event), width: strokeWidth(event, isErasing) }],
+  };
+  page.strokes.push(activeStroke);
+  renderStroke(page, activeStroke);
   render();
 });
 
 canvas.addEventListener('pointermove', (event) => {
-  if (!isDrawing) return;
-  const page = getPage();
-  page.ctx.lineWidth = strokeWidth(event, isErasing);
-  points.push(pointFromEvent(event));
-  if (points.length > 3) points.shift();
-  drawSmooth();
+  if (!activeStroke) return;
+  activeStroke.points.push({ ...pointFromEvent(event), width: strokeWidth(event, activeStroke.isErasing) });
+  renderStroke(getPage(), {
+    ...activeStroke,
+    points: activeStroke.points.slice(-3),
+  });
+  render();
 });
 
 function endStroke(event) {
-  if (!isDrawing) return;
-  isDrawing = false;
-  isErasing = false;
+  if (!activeStroke) return;
   canvas.releasePointerCapture?.(event.pointerId);
-  getPage().ctx.globalCompositeOperation = 'source-over';
-  points = [];
+  activeStroke = null;
+  markPageDirty(getPage());
 }
 
 canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', endStroke);
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+canvas.addEventListener('animationend', () => canvas.classList.remove('page-enter-up', 'page-enter-down'));
 
 colorInput.addEventListener('click', cycleColor);
 widthInput.addEventListener('input', setStrokeFromUI);
@@ -232,12 +333,15 @@ fsBtn.addEventListener('click', enterFullscreen);
 window.addEventListener('keydown', (event) => {
   if (event.target instanceof HTMLInputElement) return;
 
-  if (event.key === 'ArrowLeft') {
+  if (event.key === 'ArrowUp') {
     event.preventDefault();
     changePage(-1);
-  } else if (event.key === 'ArrowRight') {
+  } else if (event.key === 'ArrowDown') {
     event.preventDefault();
     changePage(1);
+  } else if (event.key === 'Backspace') {
+    event.preventDefault();
+    undoLastStroke();
   } else if (event.key === 'F13') {
     cycleColor();
   } else if (event.key.toLowerCase() === 'c') {

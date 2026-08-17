@@ -21,13 +21,14 @@ The app is also fully static: [index.html](index.html), [style.css](style.css), 
 | --- | --- |
 | Draw | Drag with a mouse, pen, or single finger |
 | Cycle red, green, blue, and white | Click the color swatch or press `F13` |
-| Change base stroke width | Use the width slider (1–60 px) |
+| Change stroke size | Use the discrete size slider (0–9, with 0 as the thinnest default) |
 | Toggle fullscreen | Click the fullscreen button or press `F` |
 | Exit fullscreen | Press `Esc` |
 | Clear the current canvas immediately | Press `C` |
 | Clear the current canvas with confirmation | Double-click the canvas |
-| Previous canvas page | Left Arrow |
-| Next canvas page | Right Arrow |
+| Previous canvas page | Up Arrow |
+| Next canvas page | Down Arrow |
+| Undo the last stroke | Backspace |
 | Spot erase | Draw with the Slim Pen 2 rear eraser button |
 
 ## Behavior
@@ -37,9 +38,10 @@ The app is also fully static: [index.html](index.html), [style.css](style.css), 
 - Pointer input is captured during a stroke, so a stroke continues even if the pointer leaves the canvas momentarily.
 - Drawing uses real-time quadratic curves between pointer midpoints, producing smooth rounded paths as the user draws rather than applying smoothing afterward.
 - On pressure-capable pens and devices, pressure subtly affects stroke width. The rear eraser works as a traditional spot eraser, removing only the pixels it passes over with a 2.5× wider footprint.
-- Pages are addressed by integer position, starting at page `0`. Left Arrow can create and open page `-1`; Right Arrow can create and open page `1`. Navigation is unbounded in either direction, and each page retains its own drawing for the browser session.
+- Pages are addressed by integer position, starting at page `0`. Up Arrow can create and open page `-1`; Down Arrow can create and open page `1`. Navigation is unbounded in either direction, each page retains its own drawing for the browser session, and a short directional slide cue indicates movement.
 - The canvas uses device-pixel-ratio scaling for crisp high-DPI rendering.
 - Entering or leaving fullscreen, rotating a device, or resizing the window preserves every page. Page surfaces grow when the viewport grows and center their existing drawing in the added space; a smaller viewport displays the centered portion without shrinking the underlying page.
+- Each page automatically downloads a PNG 15 seconds after its most recent drawing, erase, clear, or undo activity. The timer resets for subsequent activity, and untouched pages do not download files. Chrome may ask permission before allowing repeated automatic downloads.
 - The fullscreen request asks the browser to hide navigation UI where the browser permits it. Browsers require fullscreen to be initiated from a user action.
 
 ## Slim Pen 2 top-button helper (Windows)
