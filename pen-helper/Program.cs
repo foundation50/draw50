@@ -16,12 +16,24 @@ internal static class Program
         };
 
         var sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
+        WriteDiagnostic(sent);
         if (sent == inputs.Length)
         {
             return 0;
         }
 
         return 1;
+    }
+
+    private static void WriteDiagnostic(uint sent)
+    {
+        var directory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Draw50");
+        Directory.CreateDirectory(directory);
+        File.AppendAllText(
+            Path.Combine(directory, "F13Helper.log"),
+            $"{DateTimeOffset.UtcNow:O} SendInput={sent}/2{Environment.NewLine}");
     }
 
     private static INPUT CreateKeyboardInput(uint flags) =>

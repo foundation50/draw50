@@ -62,6 +62,14 @@ The helper is source-built in [pen-helper/](pen-helper/) as a self-contained, si
 
 The helper sends its keystroke to whichever application Windows considers foreground. Chrome must remain focused for Draw50 to receive `F13`.
 
+### Troubleshooting top-button presses
+
+Each helper launch records its `SendInput` result in `%LOCALAPPDATA%\Draw50\F13Helper.log`.
+
+- No new log line after a top-button click means Windows did not launch the configured program; revisit the Pen & Windows Ink shortcut-button mapping.
+- `SendInput=2/2` means the helper launched and Windows accepted both the F13 key-down and key-up events. Ensure Chrome is focused and confirm the deployed Draw50 page contains the current `F13` handler.
+- A value other than `2/2` means Windows did not accept both keyboard input events.
+
 ## Browser notes
 
 The app uses the Pointer Events API and the Fullscreen API, both supported in current major desktop and mobile browsers. Fullscreen behavior and browser UI hiding remain subject to each browser's platform policies. The rear eraser is handled through pen pointer events. Operating-system-level pen indicators are outside a web page's control.
