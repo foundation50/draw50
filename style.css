@@ -26,6 +26,8 @@ canvas#draw-canvas{
   cursor: none;
 }
 canvas#transition-canvas{z-index:1;opacity:0;pointer-events:none}
+canvas#transition-canvas.page-exit-up,
+canvas#transition-canvas.page-exit-down{z-index:3}
 .page-enter-up{animation:page-enter-up 180ms ease-out}
 .page-enter-down{animation:page-enter-down 180ms ease-out}
 .page-exit-up{animation:page-exit-up 180ms ease-in forwards}
