@@ -15,8 +15,9 @@ internal static class Program
             CreateKeyboardInput(KeyEventFKeyUp),
         };
 
-        var sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
-        WriteDiagnostic(sent);
+        var inputSize = Marshal.SizeOf<INPUT>();
+        var sent = SendInput((uint)inputs.Length, inputs, inputSize);
+        WriteDiagnostic(sent, inputSize);
         if (sent == inputs.Length)
         {
             return 0;
@@ -25,7 +26,7 @@ internal static class Program
         return 1;
     }
 
-    private static void WriteDiagnostic(uint sent)
+    private static void WriteDiagnostic(uint sent, int inputSize)
     {
         var directory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -33,7 +34,7 @@ internal static class Program
         Directory.CreateDirectory(directory);
         File.AppendAllText(
             Path.Combine(directory, "F13Helper.log"),
-            $"{DateTimeOffset.UtcNow:O} SendInput={sent}/2{Environment.NewLine}");
+            $"{DateTimeOffset.UtcNow:O} SendInput={sent}/2 InputSize={inputSize}{Environment.NewLine}");
     }
 
     private static INPUT CreateKeyboardInput(uint flags) =>
@@ -60,7 +61,8 @@ internal static class Program
         public InputUnion Union;
     }
 
-    [StructLayout(LayoutKind.Explicit)]
+    // Native INPUT contains a union whose largest member is MOUSEINPUT (32 bytes on win-x64).
+    [StructLayout(LayoutKind.Explicit, Size = 32)]
     private struct InputUnion
     {
         [FieldOffset(0)]
