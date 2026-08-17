@@ -50,7 +50,7 @@ The Slim Pen 2 top Bluetooth button can launch the included, windowless [F13Help
 
 Tag a release with `pen-helper-v*` (for example, `pen-helper-v1.0.0`). The [release workflow](.github/workflows/release-pen-helper.yml) builds `F13Helper.exe` on a GitHub-hosted Windows runner and attaches it to the GitHub Release. A manually dispatched workflow run uploads the same executable as an Actions artifact.
 
-The helper is source-built in [pen-helper/](pen-helper/) using .NET 8 Native AOT. It has no window, installation step, or runtime dependency on the Surface.
+The helper is source-built in [pen-helper/](pen-helper/) as a self-contained, single-file .NET 8 executable. It has no window, installation step, or runtime dependency on the Surface.
 
 ### Configuring the Surface
 
