@@ -1,5 +1,7 @@
 const canvas = document.getElementById('draw-canvas');
 const ctx = canvas.getContext('2d', { alpha: false });
+const transitionCanvas = document.getElementById('transition-canvas');
+const transitionCtx = transitionCanvas.getContext('2d');
 const colorInput = document.getElementById('color');
 const widthInput = document.getElementById('width');
 const widthValue = document.getElementById('width-value');
@@ -161,6 +163,8 @@ function resizeCanvas() {
   };
   canvas.width = Math.round(viewport.width * viewport.dpr);
   canvas.height = Math.round(viewport.height * viewport.dpr);
+  transitionCanvas.width = canvas.width;
+  transitionCanvas.height = canvas.height;
   for (const page of pages.values()) {
     expandPage(page, viewport.width, viewport.height);
   }
@@ -226,6 +230,11 @@ function undoLastStroke() {
 }
 
 function changePage(direction) {
+  transitionCanvas.classList.remove('page-exit-up', 'page-exit-down');
+  transitionCtx.setTransform(1, 0, 0, 1, 0, 0);
+  transitionCtx.clearRect(0, 0, transitionCanvas.width, transitionCanvas.height);
+  transitionCtx.drawImage(canvas, 0, 0);
+
   activePageIndex += direction;
   getPage();
   pageIndicator.textContent = `Page ${activePageIndex}`;
@@ -233,6 +242,7 @@ function changePage(direction) {
   render();
   void canvas.offsetWidth;
   canvas.classList.add(direction < 0 ? 'page-enter-up' : 'page-enter-down');
+  transitionCanvas.classList.add(direction < 0 ? 'page-exit-up' : 'page-exit-down');
 }
 
 function midpoint(first, second) {
@@ -312,6 +322,10 @@ canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', endStroke);
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 canvas.addEventListener('animationend', () => canvas.classList.remove('page-enter-up', 'page-enter-down'));
+transitionCanvas.addEventListener('animationend', () => {
+  transitionCanvas.classList.remove('page-exit-up', 'page-exit-down');
+  transitionCtx.clearRect(0, 0, transitionCanvas.width, transitionCanvas.height);
+});
 
 colorInput.addEventListener('click', cycleColor);
 widthInput.addEventListener('input', setStrokeFromUI);
@@ -321,7 +335,7 @@ async function enterFullscreen() {
     if (document.fullscreenElement) {
       await document.exitFullscreen();
     } else {
-      await canvas.requestFullscreen({ navigationUI: 'hide' });
+      await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
     }
   } catch (error) {
     console.warn('Fullscreen error', error);

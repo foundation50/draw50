@@ -12,19 +12,28 @@ body{
   color:var(--accent);
   -webkit-font-smoothing:antialiased;
 }
-canvas#draw-canvas{
+canvas#draw-canvas,
+canvas#transition-canvas{
   position:fixed;
   inset:0; /* top:0; right:0; bottom:0; left:0 */
   width:100vw;
   height:100vh;
   display:block;
   touch-action: none; /* allow pointer events for drawing */
+}
+canvas#draw-canvas{
+  z-index:2;
   cursor: none;
 }
+canvas#transition-canvas{z-index:1;opacity:0;pointer-events:none}
 .page-enter-up{animation:page-enter-up 180ms ease-out}
 .page-enter-down{animation:page-enter-down 180ms ease-out}
+.page-exit-up{animation:page-exit-up 180ms ease-in forwards}
+.page-exit-down{animation:page-exit-down 180ms ease-in forwards}
 @keyframes page-enter-up{from{transform:translateY(-8%);opacity:0.2}to{transform:translateY(0);opacity:1}}
 @keyframes page-enter-down{from{transform:translateY(8%);opacity:0.2}to{transform:translateY(0);opacity:1}}
+@keyframes page-exit-up{from{transform:translateY(0);opacity:1}to{transform:translateY(8%);opacity:0}}
+@keyframes page-exit-down{from{transform:translateY(0);opacity:1}to{transform:translateY(-8%);opacity:0}}
 .overlay{
   position:fixed;
   z-index:30;
@@ -52,7 +61,10 @@ canvas#draw-canvas{
 .hint{right:12px;top:12px;padding:8px 12px;background:rgba(0,0,0,0.35);border-radius:8px;font-size:13px}
 
 /* When in fullscreen make sure canvas still fills viewport */
-:fullscreen canvas#draw-canvas, :-webkit-full-screen canvas#draw-canvas {
+:fullscreen canvas#draw-canvas,
+:fullscreen canvas#transition-canvas,
+:-webkit-full-screen canvas#draw-canvas,
+:-webkit-full-screen canvas#transition-canvas {
   width:100vw;
   height:100vh;
 }
