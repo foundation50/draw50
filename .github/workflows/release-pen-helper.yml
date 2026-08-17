@@ -1,0 +1,38 @@
+name: Release F13 helper
+
+on:
+  push:
+    tags:
+      - "pen-helper-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish F13Helper.exe
+        run: >
+          dotnet publish pen-helper/F13Helper.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --output release
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/F13Helper.exe
+          generate_release_notes: true
+
+      - name: Upload executable artifact
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: F13Helper-win-x64
+          path: release/F13Helper.exe

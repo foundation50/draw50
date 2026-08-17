@@ -7,7 +7,6 @@ const pageIndicator = document.getElementById('page-indicator');
 
 const pages = new Map();
 const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffffff'];
-const barrelPointerIds = new Set();
 let activePageIndex = 0;
 let isDrawing = false;
 let isErasing = false;
@@ -158,10 +157,6 @@ function isRearEraser(event) {
   return event.pointerType === 'pen' && (event.button === 5 || (event.buttons & 32) !== 0);
 }
 
-function isBarrelButton(event) {
-  return event.pointerType === 'pen' && (event.button === 2 || (event.buttons & 2) !== 0);
-}
-
 function pointFromEvent(event) {
   const rect = canvas.getBoundingClientRect();
   const offset = getViewportOffset(getPage());
@@ -171,20 +166,14 @@ function pointFromEvent(event) {
   };
 }
 
-function strokeWidth(event) {
+function strokeWidth(event, isEraser = false) {
   const pressure = event.pressure || 0.5;
   const baseWidth = parseFloat(widthInput.value) || 6;
-  return baseWidth * (pressure < 0.01 ? 1 : 0.5 + pressure);
+  const pressureWidth = baseWidth * (pressure < 0.01 ? 1 : 0.5 + pressure);
+  return isEraser ? pressureWidth * 2.5 : pressureWidth;
 }
 
 canvas.addEventListener('pointerdown', (event) => {
-  if (isBarrelButton(event)) {
-    barrelPointerIds.add(event.pointerId);
-    cycleColor();
-    event.preventDefault();
-    return;
-  }
-
   if (event.button && event.button !== 0 && !isRearEraser(event)) return;
   canvas.setPointerCapture(event.pointerId);
   isDrawing = true;
@@ -193,7 +182,7 @@ canvas.addEventListener('pointerdown', (event) => {
 
   const page = getPage();
   page.ctx.globalCompositeOperation = isErasing ? 'destination-out' : 'source-over';
-  page.ctx.lineWidth = strokeWidth(event);
+  page.ctx.lineWidth = strokeWidth(event, isErasing);
   page.ctx.beginPath();
   page.ctx.arc(points[0].x, points[0].y, page.ctx.lineWidth / 2, 0, Math.PI * 2);
   page.ctx.fillStyle = isErasing ? '#000000' : page.ctx.strokeStyle;
@@ -202,26 +191,15 @@ canvas.addEventListener('pointerdown', (event) => {
 });
 
 canvas.addEventListener('pointermove', (event) => {
-  if (isBarrelButton(event)) {
-    if (!barrelPointerIds.has(event.pointerId)) {
-      barrelPointerIds.add(event.pointerId);
-      cycleColor();
-      points = [];
-    }
-    return;
-  }
-
-  barrelPointerIds.delete(event.pointerId);
   if (!isDrawing) return;
   const page = getPage();
-  page.ctx.lineWidth = strokeWidth(event);
+  page.ctx.lineWidth = strokeWidth(event, isErasing);
   points.push(pointFromEvent(event));
   if (points.length > 3) points.shift();
   drawSmooth();
 });
 
 function endStroke(event) {
-  barrelPointerIds.delete(event.pointerId);
   if (!isDrawing) return;
   isDrawing = false;
   isErasing = false;
@@ -260,6 +238,8 @@ window.addEventListener('keydown', (event) => {
   } else if (event.key === 'ArrowRight') {
     event.preventDefault();
     changePage(1);
+  } else if (event.key === 'F13') {
+    cycleColor();
   } else if (event.key.toLowerCase() === 'c') {
     clearPage();
   } else if (event.key.toLowerCase() === 'f') {
