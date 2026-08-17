@@ -22,6 +22,7 @@ The app is also fully static: [index.html](index.html), [style.css](style.css), 
 | Draw | Drag with a mouse, pen, or single finger |
 | Cycle red, green, blue, and white | Click the color swatch or press `F13` |
 | Change stroke size | Use the discrete size slider (0–9, with 0 as the thinnest default) |
+| Decrease/increase stroke size | Left Arrow / Right Arrow |
 | Toggle fullscreen | Click the fullscreen button or press `F` |
 | Exit fullscreen | Press `Esc` |
 | Clear the current canvas immediately | Press `C` |
@@ -36,13 +37,14 @@ The app is also fully static: [index.html](index.html), [style.css](style.css), 
 - The canvas fills the complete browser viewport and starts with a dark grey, editor-like background. Its CSS cursor is hidden so the browser does not draw a canvas reticle while a pen is nearby.
 - Strokes are white by default.
 - Pointer input is captured during a stroke, so a stroke continues even if the pointer leaves the canvas momentarily.
-- Drawing uses real-time quadratic curves between pointer midpoints, producing smooth rounded paths as the user draws rather than applying smoothing afterward.
+- Drawing uses real-time quadratic curves between pointer midpoints, consuming Chrome's coalesced pen samples when available, to produce smooth rounded paths as the user draws rather than applying smoothing afterward. Pressure-based width changes are also filtered to reduce visible stepping on larger strokes.
 - On pressure-capable pens and devices, pressure subtly affects stroke width. The rear eraser works as a traditional spot eraser, removing only the pixels it passes over with a 2.5× wider footprint.
 - Pages are addressed by integer position, starting at page `0`. Up Arrow can create and open page `-1`; Down Arrow can create and open page `1`. Navigation is unbounded in either direction, each page retains its own drawing for the browser session, and the departing and arriving pages slide in opposite directions to indicate movement.
 - The canvas uses device-pixel-ratio scaling for crisp high-DPI rendering.
 - Entering or leaving fullscreen, rotating a device, or resizing the window preserves every page. Page surfaces grow when the viewport grows and center their existing drawing in the added space; a smaller viewport displays the centered portion without shrinking the underlying page.
 - Each page automatically downloads a PNG 15 seconds after its most recent drawing, erase, clear, or undo activity. The timer resets for subsequent activity, and untouched pages do not download files. Chrome may ask permission before allowing repeated automatic downloads.
 - The fullscreen request asks the browser to hide navigation UI where the browser permits it. Browsers require fullscreen to be initiated from a user action.
+- Fullscreen hides the app toolbar and hint so only the canvases are visible.
 
 ## Slim Pen 2 top-button helper (Windows)
 

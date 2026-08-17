@@ -213,7 +213,6 @@ function downloadPage(index) {
 
 function clearPage() {
   const page = getPage();
-  if (page.strokes.length === 0) return;
   page.strokes = [];
   redrawPage(page);
   markPageDirty(page);
@@ -260,6 +259,15 @@ function setStrokeFromUI() {
   widthValue.textContent = widthInput.value;
 }
 
+function adjustStrokeSize(direction) {
+  const nextSize = Math.min(
+    Number(widthInput.max),
+    Math.max(Number(widthInput.min), Number(widthInput.value) + direction),
+  );
+  widthInput.value = String(nextSize);
+  setStrokeFromUI();
+}
+
 function cycleColor() {
   const colorIndex = colors.indexOf(colorInput.value.toLowerCase());
   colorInput.value = colors[(colorIndex + 1) % colors.length];
@@ -285,6 +293,19 @@ function strokeWidth(event, isEraser = false) {
   return isEraser ? pressureWidth * 2.5 : pressureWidth;
 }
 
+function addStrokePoint(event) {
+  const lastPoint = activeStroke.points.at(-1);
+  const point = pointFromEvent(event);
+  if (lastPoint && lastPoint.x === point.x && lastPoint.y === point.y) return;
+  const targetWidth = strokeWidth(event, activeStroke.isErasing);
+  const width = lastPoint ? lastPoint.width * 0.7 + targetWidth * 0.3 : targetWidth;
+  activeStroke.points.push({ ...point, width });
+  renderStroke(getPage(), {
+    ...activeStroke,
+    points: activeStroke.points.slice(-3),
+  });
+}
+
 canvas.addEventListener('pointerdown', (event) => {
   if (event.button && event.button !== 0 && !isRearEraser(event)) return;
   canvas.setPointerCapture(event.pointerId);
@@ -303,11 +324,11 @@ canvas.addEventListener('pointerdown', (event) => {
 
 canvas.addEventListener('pointermove', (event) => {
   if (!activeStroke) return;
-  activeStroke.points.push({ ...pointFromEvent(event), width: strokeWidth(event, activeStroke.isErasing) });
-  renderStroke(getPage(), {
-    ...activeStroke,
-    points: activeStroke.points.slice(-3),
-  });
+  const coalescedEvents = event.getCoalescedEvents?.() ?? [event];
+  for (const coalescedEvent of coalescedEvents) {
+    addStrokePoint(coalescedEvent);
+  }
+  addStrokePoint(event);
   render();
 });
 
@@ -345,6 +366,35 @@ async function enterFullscreen() {
 fsBtn.addEventListener('click', enterFullscreen);
 
 window.addEventListener('keydown', (event) => {
+  if (event.key === 'F13') {
+    cycleColor();
+    return;
+  }
+
+  if (event.code === 'KeyC') {
+    event.preventDefault();
+    clearPage();
+    return;
+  }
+
+  if (event.key === 'Backspace') {
+    event.preventDefault();
+    undoLastStroke();
+    return;
+  }
+
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault();
+    adjustStrokeSize(-1);
+    return;
+  }
+
+  if (event.key === 'ArrowRight') {
+    event.preventDefault();
+    adjustStrokeSize(1);
+    return;
+  }
+
   if (event.target instanceof HTMLInputElement) return;
 
   if (event.key === 'ArrowUp') {
@@ -353,13 +403,6 @@ window.addEventListener('keydown', (event) => {
   } else if (event.key === 'ArrowDown') {
     event.preventDefault();
     changePage(1);
-  } else if (event.key === 'Backspace') {
-    event.preventDefault();
-    undoLastStroke();
-  } else if (event.key === 'F13') {
-    cycleColor();
-  } else if (event.key.toLowerCase() === 'c') {
-    clearPage();
   } else if (event.key.toLowerCase() === 'f') {
     enterFullscreen();
   }

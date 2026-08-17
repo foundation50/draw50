@@ -71,6 +71,13 @@ canvas#transition-canvas.page-exit-down{z-index:3;opacity:1}
   height:100vh;
 }
 
+:fullscreen #toolbar,
+:fullscreen #hint,
+:-webkit-full-screen #toolbar,
+:-webkit-full-screen #hint {
+  display:none;
+}
+
 /* Minimal responsive tweaks */
 @media (max-width:520px){
   #toolbar{left:8px;top:8px;padding:6px}
