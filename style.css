@@ -27,15 +27,15 @@ canvas#draw-canvas{
 }
 canvas#transition-canvas{z-index:1;opacity:0;pointer-events:none}
 canvas#transition-canvas.page-exit-up,
-canvas#transition-canvas.page-exit-down{z-index:3}
+canvas#transition-canvas.page-exit-down{z-index:3;opacity:1}
 .page-enter-up{animation:page-enter-up 180ms ease-out}
 .page-enter-down{animation:page-enter-down 180ms ease-out}
 .page-exit-up{animation:page-exit-up 180ms ease-in forwards}
 .page-exit-down{animation:page-exit-down 180ms ease-in forwards}
-@keyframes page-enter-up{from{transform:translateY(-8%);opacity:0.2}to{transform:translateY(0);opacity:1}}
-@keyframes page-enter-down{from{transform:translateY(8%);opacity:0.2}to{transform:translateY(0);opacity:1}}
-@keyframes page-exit-up{from{transform:translateY(0);opacity:1}to{transform:translateY(8%);opacity:0}}
-@keyframes page-exit-down{from{transform:translateY(0);opacity:1}to{transform:translateY(-8%);opacity:0}}
+@keyframes page-enter-up{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+@keyframes page-enter-down{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes page-exit-up{from{transform:translateY(0)}to{transform:translateY(100%)}}
+@keyframes page-exit-down{from{transform:translateY(0)}to{transform:translateY(-100%)}}
 .overlay{
   position:fixed;
   z-index:30;
