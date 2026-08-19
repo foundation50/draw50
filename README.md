@@ -20,7 +20,7 @@ The app is also fully static: [index.html](index.html), [style.css](style.css), 
 | Action | Control |
 | --- | --- |
 | Draw | Drag with a mouse, pen, or single finger |
-| Cycle red, green, blue, and white | Click the color swatch or press `F13` |
+| Cycle red, yellow, blue, and white | Click the color swatch or press `F13` |
 | Change stroke size | Use the discrete size slider (0–9, with 0 as the thinnest default) |
 | Decrease/increase stroke size | Left Arrow / Right Arrow |
 | Toggle fullscreen | Click the fullscreen button or press `F` |

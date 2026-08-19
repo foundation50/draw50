@@ -10,7 +10,7 @@ const pageIndicator = document.getElementById('page-indicator');
 
 const AUTO_SAVE_DELAY_MS = 15_000;
 const AUTO_DOWNLOAD_ENABLED = false;
-const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffffff'];
+const colors = ['#ff0000', '#ffff00', '#0000ff', '#ffffff'];
 const strokeWidths = [2, 3, 4, 6, 8, 11, 14, 18, 23, 29];
 const pages = new Map();
 
