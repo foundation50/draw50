@@ -10,8 +10,6 @@ const pageIndicator = document.getElementById('page-indicator');
 
 const AUTO_SAVE_DELAY_MS = 15_000;
 const AUTO_DOWNLOAD_ENABLED = false;
-const SURFACE_SUPERSAMPLE_SCALE = 1.25;
-const MAX_SURFACE_PIXELS = 20_000_000;
 const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffffff'];
 const strokeWidths = [2, 3, 4, 6, 8, 11, 14, 18, 23, 29];
 const pages = new Map();
@@ -19,12 +17,6 @@ const pages = new Map();
 let activePageIndex = 0;
 let activeStroke = null;
 let viewport = { width: 0, height: 0, dpr: 1 };
-
-function surfacePixelRatio(width, height) {
-  const requestedRatio = viewport.dpr * SURFACE_SUPERSAMPLE_SCALE;
-  const maximumRatio = Math.sqrt(MAX_SURFACE_PIXELS / (width * height));
-  return Math.max(viewport.dpr, Math.min(requestedRatio, maximumRatio));
-}
 
 function createPage(width, height, dpr) {
   const surface = document.createElement('canvas');
@@ -49,7 +41,7 @@ function createPage(width, height, dpr) {
 function getPage(index = activePageIndex) {
   let page = pages.get(index);
   if (!page) {
-    page = createPage(viewport.width, viewport.height, surfacePixelRatio(viewport.width, viewport.height));
+    page = createPage(viewport.width, viewport.height, viewport.dpr);
     pages.set(index, page);
   }
   return page;
@@ -66,7 +58,7 @@ function expandPage(page, width, height) {
   const nextHeight = Math.max(page.height, height);
   if (nextWidth === page.width && nextHeight === page.height) return;
 
-  const expanded = createPage(nextWidth, nextHeight, surfacePixelRatio(nextWidth, nextHeight));
+  const expanded = createPage(nextWidth, nextHeight, page.dpr);
   const offsetX = (nextWidth - page.width) / 2;
   const offsetY = (nextHeight - page.height) / 2;
   expanded.ctx.drawImage(
@@ -92,7 +84,6 @@ function expandPage(page, width, height) {
   page.ctx = expanded.ctx;
   page.width = nextWidth;
   page.height = nextHeight;
-  page.dpr = expanded.dpr;
 }
 
 function getViewportOffset(page) {
@@ -110,8 +101,6 @@ function render() {
   const page = getPage();
   const offset = getViewportOffset(page);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
   ctx.fillStyle = backgroundColor();
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(
@@ -140,28 +129,19 @@ function renderStroke(page, stroke) {
   drawCtx.arc(points[0].x, points[0].y, drawCtx.lineWidth / 2, 0, Math.PI * 2);
   drawCtx.fill();
 
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const start = points[index];
-    const end = points[index + 1];
-    const previous = index > 0
-      ? points[index - 1]
-      : { x: start.x * 2 - end.x, y: start.y * 2 - end.y };
-    const next = index + 2 < points.length
-      ? points[index + 2]
-      : { x: end.x * 2 - start.x, y: end.y * 2 - start.y };
-    const controls = centripetalControlPoints(previous, start, end, next);
-
-    drawCtx.lineWidth = end.width;
+  for (let index = 1; index < points.length; index += 1) {
+    const current = points[index];
+    drawCtx.lineWidth = current.width;
     drawCtx.beginPath();
-    drawCtx.moveTo(start.x, start.y);
-    drawCtx.bezierCurveTo(
-      controls.first.x,
-      controls.first.y,
-      controls.second.x,
-      controls.second.y,
-      end.x,
-      end.y,
-    );
+    if (index === 1) {
+      drawCtx.moveTo(points[0].x, points[0].y);
+      drawCtx.lineTo(current.x, current.y);
+    } else {
+      const firstMidpoint = midpoint(points[index - 2], points[index - 1]);
+      const secondMidpoint = midpoint(points[index - 1], current);
+      drawCtx.moveTo(firstMidpoint.x, firstMidpoint.y);
+      drawCtx.quadraticCurveTo(points[index - 1].x, points[index - 1].y, secondMidpoint.x, secondMidpoint.y);
+    }
     drawCtx.stroke();
   }
 }
@@ -268,41 +248,8 @@ function changePage(direction) {
   transitionCanvas.classList.add(direction < 0 ? 'page-exit-up' : 'page-exit-down');
 }
 
-function centripetalControlPoints(previous, start, end, next) {
-  const parameterDistance = (first, second) => Math.sqrt(Math.hypot(second.x - first.x, second.y - first.y));
-  const t0 = 0;
-  const t1 = t0 + parameterDistance(previous, start);
-  const t2 = t1 + parameterDistance(start, end);
-  const t3 = t2 + parameterDistance(end, next);
-  const segmentLength = t2 - t1;
-
-  const firstTangent = {
-    x: (end.x - start.x) / segmentLength
-      - (end.x - previous.x) / (t2 - t0)
-      + (start.x - previous.x) / (t1 - t0),
-    y: (end.y - start.y) / segmentLength
-      - (end.y - previous.y) / (t2 - t0)
-      + (start.y - previous.y) / (t1 - t0),
-  };
-  const secondTangent = {
-    x: (next.x - end.x) / (t3 - t2)
-      - (next.x - start.x) / (t3 - t1)
-      + (end.x - start.x) / segmentLength,
-    y: (next.y - end.y) / (t3 - t2)
-      - (next.y - start.y) / (t3 - t1)
-      + (end.y - start.y) / segmentLength,
-  };
-
-  return {
-    first: {
-      x: start.x + firstTangent.x * segmentLength / 3,
-      y: start.y + firstTangent.y * segmentLength / 3,
-    },
-    second: {
-      x: end.x - secondTangent.x * segmentLength / 3,
-      y: end.y - secondTangent.y * segmentLength / 3,
-    },
-  };
+function midpoint(first, second) {
+  return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
 }
 
 function selectedStrokeWidth() {
@@ -403,10 +350,7 @@ function endStroke(event) {
   addStrokePoint(event, true);
   canvas.releasePointerCapture?.(event.pointerId);
   activeStroke = null;
-  const page = getPage();
-  redrawPage(page);
-  markPageDirty(page);
-  render();
+  markPageDirty(getPage());
 }
 
 canvas.addEventListener('pointerup', endStroke);
