@@ -9,6 +9,7 @@ const fsBtn = document.getElementById('fullscreen-btn');
 const pageIndicator = document.getElementById('page-indicator');
 
 const AUTO_SAVE_DELAY_MS = 15_000;
+const AUTO_DOWNLOAD_ENABLED = false;
 const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffffff'];
 const strokeWidths = [2, 3, 4, 6, 8, 11, 14, 18, 23, 29];
 const pages = new Map();
@@ -174,6 +175,9 @@ function resizeCanvas() {
 function markPageDirty(page, index = activePageIndex) {
   page.revision += 1;
   if (page.saveTimer) clearTimeout(page.saveTimer);
+  page.saveTimer = null;
+  if (!AUTO_DOWNLOAD_ENABLED) return;
+
   const revision = page.revision;
   page.saveTimer = setTimeout(() => {
     page.saveTimer = null;
@@ -211,12 +215,12 @@ function downloadPage(index) {
   }, 'image/png');
 }
 
-function clearPage() {
-  const page = getPage();
+function clearPage(index = activePageIndex) {
+  const page = getPage(index);
   page.strokes = [];
   redrawPage(page);
-  markPageDirty(page);
-  render();
+  markPageDirty(page, index);
+  if (index === activePageIndex) render();
 }
 
 function undoLastStroke() {
@@ -290,13 +294,22 @@ function pointFromEvent(event) {
 function strokeWidth(event, isEraser = false) {
   const pressure = event.pressure || 0.5;
   const pressureWidth = selectedStrokeWidth() * (pressure < 0.01 ? 1 : 0.5 + pressure);
-  return isEraser ? pressureWidth * 2.5 : pressureWidth;
+  if (!isEraser) return pressureWidth;
+  return pressureWidth * (Number(widthInput.value) === 0 ? 4 : 3);
 }
 
-function addStrokePoint(event) {
+function addStrokePoint(event, preserveEndpoint = false) {
   const lastPoint = activeStroke.points.at(-1);
-  const point = pointFromEvent(event);
-  if (lastPoint && lastPoint.x === point.x && lastPoint.y === point.y) return;
+  const rawPoint = pointFromEvent(event);
+  if (lastPoint && Math.hypot(lastPoint.x - rawPoint.x, lastPoint.y - rawPoint.y) < 0.1) return;
+
+  const smoothingFactor = selectedStrokeWidth() >= 14 ? 0.55 : 0.72;
+  const point = lastPoint && !preserveEndpoint
+    ? {
+        x: lastPoint.x + (rawPoint.x - lastPoint.x) * smoothingFactor,
+        y: lastPoint.y + (rawPoint.y - lastPoint.y) * smoothingFactor,
+      }
+    : rawPoint;
   const targetWidth = strokeWidth(event, activeStroke.isErasing);
   const width = lastPoint ? lastPoint.width * 0.7 + targetWidth * 0.3 : targetWidth;
   activeStroke.points.push({ ...point, width });
@@ -334,6 +347,7 @@ canvas.addEventListener('pointermove', (event) => {
 
 function endStroke(event) {
   if (!activeStroke) return;
+  addStrokePoint(event, true);
   canvas.releasePointerCapture?.(event.pointerId);
   activeStroke = null;
   markPageDirty(getPage());

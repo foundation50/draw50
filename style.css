@@ -1,6 +1,6 @@
 /* Fullscreen drawing canvas style */
 :root{
-  --bg:#1f2226; /* dark grey editor-like */
+  --bg:#FFD9BB;
   --toolbar-bg: rgba(16,18,20,0.6);
   --accent: rgba(255,255,255,0.85);
 }
