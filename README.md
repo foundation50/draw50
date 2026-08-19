@@ -42,7 +42,7 @@ The app is also fully static: [index.html](index.html), [style.css](style.css), 
 - The canvas uses device-pixel-ratio scaling for crisp high-DPI rendering.
 - Entering or leaving fullscreen, rotating a device, or resizing the window preserves every page. Page surfaces grow when the viewport grows and center their existing drawing in the added space; a smaller viewport displays the centered portion without shrinking the underlying page.
 - PNG auto-download code is present but disabled by default. Set `AUTO_DOWNLOAD_ENABLED` to `true` in [app.js](app.js) to download a page 15 seconds after its most recent drawing, erase, clear, or undo activity.
-- The fullscreen request asks the browser to hide navigation UI where the browser permits it. Browsers require fullscreen to be initiated from a user action.
+- The fullscreen request targets the dedicated app container and asks the browser to hide navigation UI where the browser permits it. Browsers require fullscreen to be initiated from a user action.
 - Fullscreen hides the app toolbar and hint so only the canvases are visible.
 
 ## Slim Pen 2 top-button helper (Windows)

@@ -1,5 +1,6 @@
 const canvas = document.getElementById('draw-canvas');
 const ctx = canvas.getContext('2d', { alpha: false });
+const app = document.getElementById('draw-app');
 const transitionCanvas = document.getElementById('transition-canvas');
 const transitionCtx = transitionCanvas.getContext('2d');
 const colorInput = document.getElementById('color');
@@ -371,7 +372,7 @@ async function enterFullscreen() {
     if (document.fullscreenElement) {
       await document.exitFullscreen();
     } else {
-      await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+      await app.requestFullscreen({ navigationUI: 'hide' });
     }
   } catch (error) {
     console.warn('Fullscreen error', error);

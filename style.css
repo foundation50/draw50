@@ -5,6 +5,7 @@
   --accent: rgba(255,255,255,0.85);
 }
 html,body{height:100%;}
+#draw-app{height:100%;width:100%;}
 body{
   margin:0;
   background:var(--bg);
