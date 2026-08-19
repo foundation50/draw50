@@ -38,7 +38,7 @@ The app is also fully static: [index.html](index.html), [style.css](style.css), 
 - Strokes are white by default.
 - Pointer input is captured during a stroke, so a stroke continues even if the pointer leaves the canvas momentarily.
 - Drawing uses real-time quadratic curves between pointer midpoints, consuming Chrome's coalesced pen samples when available, to produce smooth rounded paths as the user draws rather than applying smoothing afterward. Position and pressure changes are filtered, with stronger position filtering on larger strokes, to reduce visible stepping and jitter.
-- On pressure-capable pens and devices, pressure subtly affects stroke width. The rear eraser works as a traditional spot eraser, removing only the pixels it passes over with a 3× wider footprint (4× at the default size level).
+- On pressure-capable pens and devices, pressure subtly affects stroke width. The rear eraser works as a traditional spot eraser, removing only the pixels it passes over with a 5× wider footprint (6× at the default size level).
 - Pages are addressed by integer position, starting at page `0`. Up Arrow can create and open page `-1`; Down Arrow can create and open page `1`. Navigation is unbounded in either direction, each page retains its own drawing for the browser session, and the departing and arriving pages slide in opposite directions to indicate movement.
 - The canvas uses device-pixel-ratio scaling for crisp high-DPI rendering.
 - Entering or leaving fullscreen, rotating a device, or resizing the window preserves every page. Page surfaces grow when the viewport grows and center their existing drawing in the added space; a smaller viewport displays the centered portion without shrinking the underlying page.

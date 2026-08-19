@@ -295,7 +295,7 @@ function strokeWidth(event, isEraser = false) {
   const pressure = event.pressure || 0.5;
   const pressureWidth = selectedStrokeWidth() * (pressure < 0.01 ? 1 : 0.5 + pressure);
   if (!isEraser) return pressureWidth;
-  return pressureWidth * (Number(widthInput.value) === 0 ? 4 : 3);
+  return pressureWidth * (Number(widthInput.value) === 0 ? 6 : 5);
 }
 
 function addStrokePoint(event, preserveEndpoint = false) {
