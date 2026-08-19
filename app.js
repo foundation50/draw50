@@ -356,6 +356,7 @@ function endStroke(event) {
 canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', endStroke);
 canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+canvas.addEventListener('dblclick', () => undefined);
 canvas.addEventListener('animationend', () => canvas.classList.remove('page-enter-up', 'page-enter-down'));
 transitionCanvas.addEventListener('animationend', () => {
   transitionCanvas.classList.remove('page-exit-up', 'page-exit-down');
