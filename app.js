@@ -422,10 +422,6 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
-canvas.addEventListener('dblclick', () => {
-  if (confirm('Clear canvas?')) clearPage();
-});
-
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 200));
 window.addEventListener(

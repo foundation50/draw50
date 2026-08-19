@@ -26,7 +26,6 @@ The app is also fully static: [index.html](index.html), [style.css](style.css), 
 | Toggle fullscreen | Click the fullscreen button or press `F` |
 | Exit fullscreen | Press `Esc` |
 | Clear the current canvas immediately | Press `C` |
-| Clear the current canvas with confirmation | Double-click the canvas |
 | Previous canvas page | Up Arrow |
 | Next canvas page | Down Arrow |
 | Undo the last stroke | Backspace |
