@@ -72,12 +72,8 @@ canvas#transition-canvas.page-exit-down{z-index:3;opacity:1}
   height:100vh;
 }
 
-:fullscreen #toolbar,
-:fullscreen #hint,
-:-webkit-full-screen #toolbar,
-:-webkit-full-screen #hint,
-.desktop-fullscreen #toolbar,
-.desktop-fullscreen #hint {
+.ui-hidden #toolbar,
+.ui-hidden #hint {
   display:none;
 }
 

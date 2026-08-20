@@ -6,7 +6,6 @@ const transitionCtx = transitionCanvas.getContext('2d');
 const colorInput = document.getElementById('color');
 const widthInput = document.getElementById('width');
 const widthValue = document.getElementById('width-value');
-const fsBtn = document.getElementById('fullscreen-btn');
 const pageIndicator = document.getElementById('page-indicator');
 
 const AUTO_SAVE_DELAY_MS = 15_000;
@@ -394,8 +393,6 @@ async function enterFullscreen() {
   }
 }
 
-fsBtn.addEventListener('click', enterFullscreen);
-
 if (window.draw50Desktop) {
   document.documentElement.classList.add('desktop-fullscreen');
   window.draw50Desktop.onFullscreenChange((isFullscreen) => {
@@ -418,6 +415,12 @@ window.addEventListener('keydown', (event) => {
   if (event.key === 'Backspace') {
     event.preventDefault();
     undoLastStroke();
+    return;
+  }
+
+  if (event.code === 'KeyU') {
+    event.preventDefault();
+    app.classList.toggle('ui-hidden');
     return;
   }
 

@@ -49,8 +49,9 @@ Tagging a release as `draw50-v*` runs [the desktop-release workflow](.github/wor
 | Cycle red, yellow, blue, and white | Click the color swatch or press `F13` |
 | Change stroke size | Use the discrete size slider (0–9, with 0 as the thinnest default) |
 | Decrease/increase stroke size | Left Arrow / Right Arrow |
-| Toggle fullscreen | Click the fullscreen button or press `F` |
+| Toggle fullscreen | Press `F` |
 | Exit fullscreen | Press `Esc` |
+| Toggle toolbar and hint | Press `U` |
 | Clear the current canvas immediately | Press `C` |
 | Previous canvas page | Up Arrow |
 | Next canvas page | Down Arrow |
@@ -70,7 +71,7 @@ Tagging a release as `draw50-v*` runs [the desktop-release workflow](.github/wor
 - Entering or leaving fullscreen, rotating a device, or resizing the window preserves every page. Page surfaces grow when the viewport grows and center their existing drawing in the added space; a smaller viewport displays the centered portion without shrinking the underlying page.
 - PNG auto-download code is present but disabled by default. Set `AUTO_DOWNLOAD_ENABLED` to `true` in [app.js](app.js) to download a page 15 seconds after its most recent drawing, erase, clear, or undo activity.
 - The fullscreen request targets the dedicated app container and asks the browser to hide navigation UI where the browser permits it. Browsers require fullscreen to be initiated from a user action.
-- Fullscreen hides the app toolbar and hint so only the canvases are visible.
+- Press `U` to hide or show the app toolbar and hint, including while fullscreen.
 
 ## Slim Pen 2 top-button helper (Windows)
 
