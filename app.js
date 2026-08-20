@@ -18,6 +18,7 @@ const pages = new Map();
 let activePageIndex = 0;
 let activeStroke = null;
 let viewport = { width: 0, height: 0, dpr: 1 };
+let renderFrame = null;
 
 function createPage(width, height, dpr) {
   const surface = document.createElement('canvas');
@@ -115,6 +116,14 @@ function render() {
     canvas.width,
     canvas.height,
   );
+}
+
+function scheduleRender() {
+  if (renderFrame !== null) return;
+  renderFrame = requestAnimationFrame(() => {
+    renderFrame = null;
+    render();
+  });
 }
 
 function renderStroke(page, stroke) {
@@ -333,7 +342,7 @@ canvas.addEventListener('pointerdown', (event) => {
   };
   page.strokes.push(activeStroke);
   renderStroke(page, activeStroke);
-  render();
+  scheduleRender();
 });
 
 canvas.addEventListener('pointermove', (event) => {
@@ -343,7 +352,7 @@ canvas.addEventListener('pointermove', (event) => {
     addStrokePoint(coalescedEvent);
   }
   addStrokePoint(event);
-  render();
+  scheduleRender();
 });
 
 function endStroke(event) {
@@ -352,6 +361,7 @@ function endStroke(event) {
   canvas.releasePointerCapture?.(event.pointerId);
   activeStroke = null;
   markPageDirty(getPage());
+  scheduleRender();
 }
 
 canvas.addEventListener('pointerup', endStroke);
