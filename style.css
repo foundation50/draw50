@@ -75,7 +75,9 @@ canvas#transition-canvas.page-exit-down{z-index:3;opacity:1}
 :fullscreen #toolbar,
 :fullscreen #hint,
 :-webkit-full-screen #toolbar,
-:-webkit-full-screen #hint {
+:-webkit-full-screen #hint,
+.desktop-fullscreen #toolbar,
+.desktop-fullscreen #hint {
   display:none;
 }
 

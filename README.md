@@ -15,6 +15,32 @@ Visit <http://localhost:8000> in a modern browser such as Chrome, Edge, Firefox,
 
 The app is also fully static: [index.html](index.html), [style.css](style.css), and [app.js](app.js). No installation, build step, or dependencies are required.
 
+## Electron desktop app
+
+The Electron shell opens Draw50 in a frameless native fullscreen window, removing Chrome's browser UI and fullscreen-exit affordance.
+
+### Development
+
+Install Node.js 20 or later, then run:
+
+```sh
+npm install
+npm start
+```
+
+### Portable Windows executable
+
+Build the Windows portable executable on Windows:
+
+```powershell
+npm install
+npm run dist:win
+```
+
+The packaged executable is written to `dist\Draw50-1.0.0-portable.exe`. It is self-contained and does not require Chrome or Node.js on the Surface.
+
+Tagging a release as `draw50-v*` runs [the desktop-release workflow](.github/workflows/release-electron.yml) on Windows and attaches the x64 portable executable to the GitHub Release.
+
 ## Controls
 
 | Action | Control |

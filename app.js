@@ -368,6 +368,11 @@ colorInput.addEventListener('click', cycleColor);
 widthInput.addEventListener('input', setStrokeFromUI);
 
 async function enterFullscreen() {
+  if (window.draw50Desktop) {
+    await window.draw50Desktop.toggleFullscreen();
+    return;
+  }
+
   try {
     if (document.fullscreenElement) {
       await document.exitFullscreen();
@@ -380,6 +385,13 @@ async function enterFullscreen() {
 }
 
 fsBtn.addEventListener('click', enterFullscreen);
+
+if (window.draw50Desktop) {
+  document.documentElement.classList.add('desktop-fullscreen');
+  window.draw50Desktop.onFullscreenChange((isFullscreen) => {
+    document.documentElement.classList.toggle('desktop-fullscreen', isFullscreen);
+  });
+}
 
 window.addEventListener('keydown', (event) => {
   if (event.key === 'F13') {

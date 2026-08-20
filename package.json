@@ -1,0 +1,31 @@
+{
+  "name": "draw50",
+  "version": "1.0.0",
+  "description": "Fullscreen drawing canvas for pen input",
+  "author": "Draw50",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win portable --x64"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "io.draw50.app",
+    "productName": "Draw50",
+    "files": [
+      "index.html",
+      "style.css",
+      "app.js",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "artifactName": "Draw50-${version}-portable.${ext}"
+    }
+  }
+}
