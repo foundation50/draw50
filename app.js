@@ -11,6 +11,7 @@ const gpuStatus = document.getElementById('gpu-status');
 
 const AUTO_SAVE_DELAY_MS = 15_000;
 const AUTO_DOWNLOAD_ENABLED = false;
+const STABILIZER_TRAIL_DISTANCE = 14;
 const colors = ['#ff0000', '#ffff00', '#0000ff', '#ffffff'];
 const strokeWidths = [2, 3, 4, 6, 8, 11, 14, 18, 23, 29];
 const pages = new Map();
@@ -320,8 +321,8 @@ function strokeWidth(event, isEraser = false) {
   return pressureWidth * (Number(widthInput.value) === 0 ? 18 : 8);
 }
 
-function addStrokePoint(event, preserveEndpoint = false) {
-  const lastPoint = activeStroke.points.at(-1);
+function queueStrokePoint(event, preserveEndpoint = false) {
+  const lastPoint = activeStroke.pendingPoints.at(-1) ?? activeStroke.points.at(-1);
   const rawPoint = pointFromEvent(event);
   if (lastPoint && Math.hypot(lastPoint.x - rawPoint.x, lastPoint.y - rawPoint.y) < 0.1) return;
 
@@ -334,10 +335,48 @@ function addStrokePoint(event, preserveEndpoint = false) {
     : rawPoint;
   const targetWidth = strokeWidth(event, activeStroke.isErasing);
   const width = lastPoint ? lastPoint.width * 0.7 + targetWidth * 0.3 : targetWidth;
-  activeStroke.points.push({ ...point, width });
-  renderStroke(getPage(), {
-    ...activeStroke,
-    points: activeStroke.points.slice(-3),
+  activeStroke.pendingPoints.push({ ...point, width });
+}
+
+function pendingStrokeDistance(stroke) {
+  let previousPoint = stroke.points.at(-1);
+  let distance = 0;
+  for (const point of stroke.pendingPoints) {
+    distance += Math.hypot(point.x - previousPoint.x, point.y - previousPoint.y);
+    previousPoint = point;
+  }
+  return distance;
+}
+
+function commitStabilizedPoints(flush = false) {
+  const page = getPage();
+  const trailDistance = activeStroke.isErasing ? 0 : STABILIZER_TRAIL_DISTANCE;
+  while (
+    activeStroke.pendingPoints.length > 0
+    && (flush || pendingStrokeDistance(activeStroke) > trailDistance)
+  ) {
+    activeStroke.points.push(activeStroke.pendingPoints.shift());
+    renderStroke(page, {
+      ...activeStroke,
+      points: activeStroke.points.slice(-3),
+    });
+  }
+}
+
+function addStrokePoint(event, preserveEndpoint = false) {
+  queueStrokePoint(event, preserveEndpoint);
+  commitStabilizedPoints();
+}
+
+function finishStroke(event) {
+  queueStrokePoint(event, true);
+  commitStabilizedPoints(true);
+}
+
+function renderActiveStrokeStart(page, stroke) {
+  renderStroke(page, {
+    ...stroke,
+    points: stroke.points,
   });
 }
 
@@ -351,9 +390,10 @@ canvas.addEventListener('pointerdown', (event) => {
     color: colorInput.value,
     isErasing,
     points: [{ ...pointFromEvent(event), width: strokeWidth(event, isErasing) }],
+    pendingPoints: [],
   };
   page.strokes.push(activeStroke);
-  renderStroke(page, activeStroke);
+  renderActiveStrokeStart(page, activeStroke);
   scheduleRender();
 });
 
@@ -369,7 +409,7 @@ canvas.addEventListener('pointermove', (event) => {
 
 function endStroke(event) {
   if (!activeStroke) return;
-  addStrokePoint(event, true);
+  finishStroke(event);
   canvas.releasePointerCapture?.(event.pointerId);
   activeStroke = null;
   markPageDirty(getPage());
