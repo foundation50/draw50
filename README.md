@@ -43,7 +43,7 @@ Tagging a release as `draw50-v*` runs [the desktop-release workflow](.github/wor
 
 ### Electron graphics diagnostic
 
-In the Electron app only, press `Ctrl`+`Shift`+`G` to restart the application with the opposite GPU-acceleration setting. Electron must choose this setting before Chromium starts, so the shortcut necessarily restarts the app. Use it to compare pen-hover flicker with GPU acceleration enabled and disabled; press it again to return to the original mode.
+In the Electron app only, press `Ctrl`+`Shift`+`G` to restart the application with the opposite GPU-acceleration setting. Electron must choose this setting before Chromium starts, so the shortcut necessarily restarts the app. A persistent bottom-right `GPU: On` or `GPU: Off` badge shows the active mode. Use it to compare pen-hover flicker with GPU acceleration enabled and disabled; press the shortcut again to return to the original mode.
 
 ## Controls
 

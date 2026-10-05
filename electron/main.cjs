@@ -41,11 +41,13 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('toggle-gpu-acceleration', () => {
-    const args = process.argv.filter((argument) => argument !== disableGpuSwitch);
+    const args = process.argv.slice(1).filter((argument) => argument !== disableGpuSwitch);
     if (!gpuAccelerationDisabled) args.push(disableGpuSwitch);
     app.relaunch({ args });
-    app.quit();
+    app.exit(0);
   });
+
+  ipcMain.handle('get-gpu-acceleration-state', () => !gpuAccelerationDisabled);
 
   createWindow();
 

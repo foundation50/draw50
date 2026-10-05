@@ -7,6 +7,7 @@ const colorInput = document.getElementById('color');
 const widthInput = document.getElementById('width');
 const widthValue = document.getElementById('width-value');
 const pageIndicator = document.getElementById('page-indicator');
+const gpuStatus = document.getElementById('gpu-status');
 
 const AUTO_SAVE_DELAY_MS = 15_000;
 const AUTO_DOWNLOAD_ENABLED = false;
@@ -409,6 +410,10 @@ if (window.draw50Desktop) {
   document.documentElement.classList.add('desktop-fullscreen');
   window.draw50Desktop.onFullscreenChange((isFullscreen) => {
     document.documentElement.classList.toggle('desktop-fullscreen', isFullscreen);
+  });
+  window.draw50Desktop.getGpuAccelerationState().then((isAccelerated) => {
+    gpuStatus.textContent = `GPU: ${isAccelerated ? 'On' : 'Off'}`;
+    gpuStatus.hidden = false;
   });
 }
 
