@@ -166,13 +166,25 @@ function redrawPage(page) {
 }
 
 function resizeCanvas() {
-  viewport = {
+  const nextViewport = {
     width: window.innerWidth,
     height: window.innerHeight,
     dpr: Math.max(window.devicePixelRatio || 1, 1),
   };
-  canvas.width = Math.round(viewport.width * viewport.dpr);
-  canvas.height = Math.round(viewport.height * viewport.dpr);
+  const nextCanvasWidth = Math.round(nextViewport.width * nextViewport.dpr);
+  const nextCanvasHeight = Math.round(nextViewport.height * nextViewport.dpr);
+
+  if (
+    viewport.width === nextViewport.width
+    && viewport.height === nextViewport.height
+    && viewport.dpr === nextViewport.dpr
+    && canvas.width === nextCanvasWidth
+    && canvas.height === nextCanvasHeight
+  ) return;
+
+  viewport = nextViewport;
+  canvas.width = nextCanvasWidth;
+  canvas.height = nextCanvasHeight;
   transitionCanvas.width = canvas.width;
   transitionCanvas.height = canvas.height;
   for (const page of pages.values()) {
@@ -401,6 +413,12 @@ if (window.draw50Desktop) {
 }
 
 window.addEventListener('keydown', (event) => {
+  if (event.ctrlKey && event.shiftKey && event.code === 'KeyG' && window.draw50Desktop) {
+    event.preventDefault();
+    window.draw50Desktop.toggleGpuAcceleration();
+    return;
+  }
+
   if (event.key === 'F13') {
     cycleColor();
     return;

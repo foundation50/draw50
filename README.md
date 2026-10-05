@@ -41,6 +41,10 @@ The packaged executable is written to `dist\Draw50-1.0.0-portable.exe`. It is se
 
 Tagging a release as `draw50-v*` runs [the desktop-release workflow](.github/workflows/release-electron.yml) on Windows and attaches the x64 portable executable to the GitHub Release.
 
+### Electron graphics diagnostic
+
+In the Electron app only, press `Ctrl`+`Shift`+`G` to restart the application with the opposite GPU-acceleration setting. Electron must choose this setting before Chromium starts, so the shortcut necessarily restarts the app. Use it to compare pen-hover flicker with GPU acceleration enabled and disabled; press it again to return to the original mode.
+
 ## Controls
 
 | Action | Control |
@@ -52,6 +56,7 @@ Tagging a release as `draw50-v*` runs [the desktop-release workflow](.github/wor
 | Toggle fullscreen | Press `F` |
 | Exit fullscreen | Press `Esc` |
 | Toggle toolbar and hint | Press `U` |
+| Toggle Electron GPU acceleration for diagnostics | Press `Ctrl` + `Shift` + `G` (restarts the Electron app) |
 | Clear the current canvas immediately | Press `C` |
 | Previous canvas page | Up Arrow |
 | Next canvas page | Down Arrow |
